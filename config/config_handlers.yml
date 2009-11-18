@@ -1,0 +1,3 @@
+modules/*/config/cache.yml:
+  class:    sfGenerationCacheConfigHandler
+  file: %sf_plugins_dir%/sfGenerationMemcachePlugin/lib/config/sfGenerationCacheConfigHandler.class.php
