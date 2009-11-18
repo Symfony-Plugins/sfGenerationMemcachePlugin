@@ -6,7 +6,6 @@ class sfGenerationViewCacheManager extends sfViewCacheManager {
     if ($generationKey = $this->getGenerationKey($internalUri)) {
       $key .= $generationKey;
     }
-    echo $key;
     return $key;
   }
 

@@ -221,8 +221,11 @@ class sfGenerationMemcacheCache extends sfCache
    */
   protected function getMetadata($key)
   {
-    return false; // REMOVED TO SEE IF IMPACTS PERFORMANCE - unused as far as I can see, except for debug.
-    return $this->memcache->get($this->getOption('prefix').'_metadata'.self::SEPARATOR.$key);
+    // REMOVED TO SEE IF IMPACTS PERFORMANCE - unused as far as I can see, except for debug.
+    if (sfConfig::get('sf_web_debug')) {
+      return $this->memcache->get($this->getOption('prefix').'_metadata'.self::SEPARATOR.$key);
+    }
+    return false;
   }
 
   /**
@@ -233,8 +236,10 @@ class sfGenerationMemcacheCache extends sfCache
    */
   protected function setMetadata($key, $lifetime)
   {
-    return false; // REMOVED TO SEE IF IMPACTS PERFORMANCE - unused as far as I can see, except for debug. 
-    $this->memcache->set($this->getOption('prefix').'_metadata'.self::SEPARATOR.$key, array('lastModified' => time(), 'timeout' => time() + $lifetime), false, $lifetime);
+    // REMOVED TO SEE IF IMPACTS PERFORMANCE - unused as far as I can see, except for debug. 
+    if (sfConfig::get('sf_web_debug')) {
+      $this->memcache->set($this->getOption('prefix').'_metadata'.self::SEPARATOR.$key, array('lastModified' => time(), 'timeout' => time() + $lifetime), false, $lifetime);
+    }
   }
 
   /**
