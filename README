@@ -1,0 +1,131 @@
+# sfGenerationMemcachePlugin #
+
+This plugin allows you to give groups of cached data a "generation number", which becomes part of the cache key. This number is stored under its own key in memcached. By incrementing this number using the provided methods or task, the cache for all members of the group is cleared. An unlimited number of groups can be configured.
+
+This is an alternative to symfony's built in removePattern() method, which for memcached relies on storing an array of all known cache keys in memcached (storeCacheInfo: true). This can grow very large and impact performance - prior to symfony 1.2.10 the size grows indefinitely as items are never removed. 
+
+The method used in this plugin performs significantly better than the symfony built in method on an application that maintains a cache of around 200k items. 
+
+It should be noted that this plugin doesn't allow you to be as specific when clearing cache as the built in symfony method does, as it doesn't know all of the keys. Therefore, it may not be suitable for every use case.
+
+## Requirements ##
+
+The plugin will only help you if you are using memcached as your cache backend - for notes regarding other backends, see the appendix at the bottom.
+
+## Installation ##
+
+ * Install the plugin
+
+        symfony plugin:install sfGenerationMemcachePlugin
+
+ * Edit filters.yml
+
+    Edit your application's config/factories.yml so that your app uses the plugins view cache manager and view cache classes:
+
+        all:
+          view_cache_manager:
+            class: sfGenerationViewCacheManager
+        
+          view_cache:
+            class: sfGenerationMemcacheCache
+            param:
+              host: localhost
+              port: 11211
+              prefix: frontend
+              persistent: true
+
+ * Clear cache
+
+        symfony cc
+
+## Usage ##
+
+To use the plugin, you must configure generation_group keys in the relevant cache.yml file(s)
+
+An example module/config/cache.yml config would be:
+
+        all:
+          enabled: on
+
+        show:
+          generation_group: profile
+
+        index:
+          generation_group: [ profile, home ] # an array can be given to apply multiple groups to a cache
+  
+        archive:
+          lifetime: 86400
+  
+## Understanding This Config ##
+
+This config will cause cache keys generated for module/show to be suffixed with:
+
+    /gk_profile/1
+
+And those generated for module/index to be suffixed with:
+
+    /gk_profile/1/gk_home/1 
+
+Those for module/archive are untouched as it has no generation_group set and will be as they always have been.
+
+If the generation is incremented for home, the key for module/show remains unchanged, its cache will still be valid. The key for module/index will change though, it will now be suffixed with 
+
+    /gk_profile/1/gk_home/2
+
+The key has now changed, so the cached data will be regenerated for this action (as well as any others that specify the home generation_group).
+
+Similarly, if the generation is then incremented for profile, the key for module/show gets suffixed with 
+
+    /gk_profile/2
+
+and that for module/index gets suffixed with 
+
+    /gk_profile/2/gk_home/2
+
+In this case, the keys of both cache items have now changed and so both caches will be recreated.
+
+In both of the above examples, the cache key for module/archive would be unchanged.
+
+You may be wondering about leaving all this data in cache under old generation keys, and whether its a good idea. Memcached takes care of this for us: It auto expires old items from cache according to the valid times set in cache.yml. It also removes the least recently used items from memory if it fills its allocation - which should always be the older generations of cached data. Therefore, you shouldn't run into issues as long as you have configured memcached to use a sensible amount of memory.
+
+## Incrementing The Cache ##
+
+There are two ways to increment the cache:
+
+  * From the ViewCacheManager
+
+    The sfGenerationNewCacheManager provides a method to increment the generation for a particular key:
+
+        // increment the profile generation
+        $cachemanager = sfContext::getInstance()->getViewCacheManager();
+        $cachemanager->incrementGenerationGroup('profile'); 
+
+    There is also a wrapper method that can be passed an array of keys to increment generation for.
+
+        // increment the profile and home generations
+        $cachemanager = sfContext::getInstance()->getViewCacheManager();
+        $cachemanager->incrementGenerationGroups(array('profile', 'home'));
+
+  * Using the command line task
+
+    The plugin comes with a task to clear the cache:
+
+        // increment the home generation
+        symfony cache:increment-generation home 
+
+    This task takes an optional environment and application parameter.
+
+        // increment the home generation in the dev environment for the frontend app.
+        symfony cache:increment-generation --env=prod --app=frontend home 
+
+    Default environment is dev, default app is frontend.
+
+Thats it - hope someone finds it useful! Any questions, my email is on the front page, or for a quicker response, twitter me - @benlumley
+
+## Appendix 1: Notes on suitability for other backends ## 
+
+This plugin has been designed to be used with memcached (hence the name), however, it could be used with other cache backends:
+
+The default file based cache should not be used with this method in my view - it does not auto-invalidate as the memory based systems do, so the cache would consume ever more disk space. The file based cache also does not suffer the performance issue this was designed to address. I believe this would also apply to SqlIte
+
+APC, eAccelerator and Xcache all have methods to obtain a list of keys, so are unlikely to benefit from this method to the same degree, but developers may benefit from the functionality it offers. In this case it may be worth adapting the plugin. Creation of an increment method in a copy of the relevant sfXXXCache.class.php file from symfony/lib/vendor/cache should be all that is required, plus a change to factories.yml. The increment method is simply required to store an integer value in the cache under a passed in key, or add 1 to the existing value if it already exists. If anyone does this, contact me, and I will add you as a devloper to this plugin.

@@ -51,6 +51,12 @@ class sfGenerationViewCacheManager extends sfViewCacheManager {
     return $this->cache->increment($key);
   }
   
+  public function incrementGenerationGroups($generationGroups) {
+    foreach ($generationGroups as $generationGroup) {
+      $this->incrementGenerationGroup($generationGroup);
+    }
+  }
+  
   protected function getKeyForGroup($generationGroup) {
     return 'sfGenerationGroup:' . $generationGroup;
   }

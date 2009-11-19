@@ -113,12 +113,6 @@ class sfGenerationMemcacheCache extends sfCache
     // save metadata
     $this->setMetadata($key, $lifetime);
 
-    // save key for removePattern()
-    if ($this->getOption('storeCacheInfo', false))
-    {
-      $this->setCacheInfo($key);
-    }
-
     if (false !== $this->memcache->replace($this->getOption('prefix').$key, $data, false, time() + $lifetime))
     {
       return true;
@@ -134,10 +128,6 @@ class sfGenerationMemcacheCache extends sfCache
   {
     // delete metadata
     $this->memcache->delete($this->getOption('prefix').'_metadata'.self::SEPARATOR.$key);
-    if ($this->getOption('storeCacheInfo', false))
-    {
-      $this->setCacheInfo($key, true);
-    }
     return $this->memcache->delete($this->getOption('prefix').$key);
   }
 
@@ -183,21 +173,9 @@ class sfGenerationMemcacheCache extends sfCache
    */
   public function removePattern($pattern)
   {
-    if (!$this->getOption('storeCacheInfo', false))
-    {
-      throw new sfCacheException('To use the "removePattern" method, you must set the "storeCacheInfo" option to "true".');
-    }
-
-    $regexp = self::patternToRegexp($this->getOption('prefix').$pattern);
-    foreach ($this->getCacheInfo() as $key)
-    {
-      if (preg_match($regexp, $key))
-      {
-        $this->remove(substr($key, strlen($this->getOption('prefix'))));
-      }
-    }
+    throw new sfCacheException('sfGenerationMemcacheCache does not support removePattern. It provides an alternative method of clearing cache.');
   }
-
+  
   /**
    * @see sfCache
    */
@@ -221,7 +199,6 @@ class sfGenerationMemcacheCache extends sfCache
    */
   protected function getMetadata($key)
   {
-    // REMOVED TO SEE IF IMPACTS PERFORMANCE - unused as far as I can see, except for debug.
     if (sfConfig::get('sf_web_debug')) {
       return $this->memcache->get($this->getOption('prefix').'_metadata'.self::SEPARATOR.$key);
     }
@@ -236,59 +213,18 @@ class sfGenerationMemcacheCache extends sfCache
    */
   protected function setMetadata($key, $lifetime)
   {
-    // REMOVED TO SEE IF IMPACTS PERFORMANCE - unused as far as I can see, except for debug. 
     if (sfConfig::get('sf_web_debug')) {
       $this->memcache->set($this->getOption('prefix').'_metadata'.self::SEPARATOR.$key, array('lastModified' => time(), 'timeout' => time() + $lifetime), false, $lifetime);
     }
   }
 
   /**
-   * Updates the cache information for the given cache key.
+   * Increments a key in the cache, initialises to 1 if not exits. Used for generation numbers.
    *
-   * @param string $key The cache key
-   * @param boolean $delete Delete key or not
+   * @param string $key A cache key
+   *
+   * @return int new value
    */
-  protected function setCacheInfo($key, $delete = false)
-  {
-    $keys = $this->memcache->get($this->getOption('prefix').'_metadata');
-    if (!is_array($keys))
-    {
-      $keys = array();
-    }
-
-    if ($delete)
-    {
-       if (($k = array_search($this->getOption('prefix').$key, $keys)) !== false)
-       {
-         unset($keys[$k]);
-       }
-    }
-    else
-    {
-      if (!in_array($this->getOption('prefix').$key, $keys)) 
-      {  
-    	  $keys[] = $this->getOption('prefix').$key;
-      }
-    
-    }
-
-    $this->memcache->set($this->getOption('prefix').'_metadata', $keys, 0);
-  }
-
-  /**
-   * Gets cache information.
-   */
-  protected function getCacheInfo()
-  {
-    $keys = $this->memcache->get($this->getOption('prefix').'_metadata');
-    if (!is_array($keys))
-    {
-      return array();
-    }
-
-    return $keys;
-  }
-  
   public function increment($key) {
     if ($val = $this->memcache->increment($this->getOption('prefix').$key, 1)) {
       return $val;
