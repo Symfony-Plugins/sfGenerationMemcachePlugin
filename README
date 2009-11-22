@@ -1,6 +1,6 @@
 # sfGenerationMemcachePlugin #
 
-This plugin allows you to give groups of cached data a "generation number", which becomes part of the cache key. This number is stored under its own key in memcached. By incrementing this number using the provided methods or task, the cache for all members of the group is cleared. An unlimited number of groups can be configured.
+This plugin allows you to give groups of cached data a "generation" - like a version number, which becomes part of the cache key. This number is stored under its own key in memcached. By incrementing this number using the provided methods or task, the cache for all members of the group is cleared. An unlimited number of groups can be configured.
 
 This is an alternative to symfony's built in removePattern() method, which for memcached relies on storing an array of all known cache keys in memcached (storeCacheInfo: true). This can grow very large and impact performance - prior to symfony 1.2.10 the size grows indefinitely as items are never removed. 
 
@@ -51,7 +51,7 @@ An example module/config/cache.yml config would be:
           generation_group: profile
 
         index:
-          generation_group: [ profile, home ] # an array can be given to apply multiple groups to a cache
+          generation_group: [ profile, home ] # an array can be given to apply multiple generation groups to a cache
   
         archive:
           lifetime: 86400
@@ -63,7 +63,7 @@ If you are configuring your caching from PHP, you can pass a generationGroup opt
           'generationGroup' => 'profile',
         );
         
-This also accepts arrays:
+This also accepts arrays of generation groups:
 
         sfContext::getInstance()->getViewCacheManager()->addCache('module', 'index', array(
           'lifeTime' => 3600, 
@@ -83,13 +83,13 @@ And those generated for module/index to be suffixed with:
 
 Those for module/archive are untouched as it has no generation_group set.
 
-If the generation is incremented for home, the key for module/show remains unchanged, its cache will still be valid. The key for module/index will change though, it will now be suffixed with 
+If the generation is incremented for the home generation group, the cache key for module/show remains unchanged, its cache will still be valid. The cache key for module/index will change though, it will now be suffixed with 
 
     /gk_profile/1/gk_home/2
 
-The key has now changed, so the cached data will be regenerated for this action (as well as any others that specify the home generation_group) - the cache has effectively been cleared for members of this group.
+The cache key has now changed, so the cached data will be regenerated for this action (as well as any others that specify the home generation group) - the cache has effectively been cleared for members of this generation group.
 
-Similarly, if the generation is then incremented for profile, the key for module/show gets suffixed with 
+Similarly, if the generation is then incremented for the profile generation group, the cache key for module/show gets suffixed with 
 
     /gk_profile/2
 
@@ -97,15 +97,15 @@ and that for module/index gets suffixed with
 
     /gk_profile/2/gk_home/2
 
-In this case, the keys of both cache items have now changed and so both caches will be recreated.
+In this case, the cache keys of both items have now changed and so both caches will be recreated.
 
 In both of the above examples, the cache key for module/archive would be unchanged.
 
-You may be wondering about leaving all this data in cache under old generation keys, and whether its a good idea. Memcached takes care of this for us: It auto expires old items from cache according to the valid times set in cache.yml. It also removes the least recently used items from memory if it fills its allocation - which should always be the older generations of cached data. Therefore, you shouldn't run into issues as long as you have configured memcached to use a sensible amount of memory.
+You may be wondering about leaving all this data in cache under old keys, and whether its a good idea. Memcached takes care of this for us: It auto expires old items from cache according to the valid times set in cache.yml. It also removes the least recently used items from memory if it runs out of free memory. This should always be the older generations of cached data. Therefore, you shouldn't run into issues as long as you have configured memcached with a sensible memory limit.
 
 ## Incrementing The Generation Number For A Group ##
 
-There are two ways to increment the generation number for a particular generation group:
+There are two ways to increment the generation for a particular generation group:
 
   * From the ViewCacheManager
 
@@ -123,7 +123,7 @@ There are two ways to increment the generation number for a particular generatio
 
   * Using the command line task
 
-    The plugin comes with a task to increment the generation number for a given generation group:
+    The plugin comes with a task to increment the generation for a given generation group:
 
         // increment the home generation group
         symfony cache:increment-generation home 
