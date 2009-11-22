@@ -1,6 +1,6 @@
 # sfGenerationMemcachePlugin #
 
-This plugin allows you to give groups of cached data a "generation" - like a version number, which becomes part of the cache key. This number is stored under its own key in memcached. By incrementing this number using the provided methods or task, the cache for all members of the group is cleared. An unlimited number of groups can be configured.
+This plugin allows you to give groups of cached data a "generation" - like a version number, which becomes part of the cache key. This number is stored under its own key in memcached and can be incremented as a way of clearing/invalidating the cache for members of this group.
 
 This is an alternative to symfony's built in removePattern() method, which for memcached relies on storing an array of all known cache keys in memcached (storeCacheInfo: true). This can grow very large and impact performance - prior to symfony 1.2.10 the size grows indefinitely as items are never removed. 
 
