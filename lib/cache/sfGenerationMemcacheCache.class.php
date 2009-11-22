@@ -1,7 +1,8 @@
 <?php
 
 /*
- * This file is part of the symfony package.
+ * This file is part of the sfGenerationMemcachePlugin package.
+ * (c) 2009 Ben Lumley
  * (c) 2004-2006 Fabien Potencier <fabien.potencier@symfony-project.com>
  * 
  * For the full copyright and license information, please view the LICENSE
@@ -9,11 +10,12 @@
  */
 
 /**
- * Cache class that stores cached content in memcache.
+ * Based on the sfMemcacheCache class from symfony, which stores cached content in memcache.
+ * This variation has a few minor adjustments for performance, and the extra increment method required for the plugin.
  *
- * @package    symfony
+ * @package    sfGenerationMemcachePlugin
  * @subpackage cache
- * @author     Fabien Potencier <fabien.potencier@symfony-project.com>
+ * @author     Ben Lumley
  * @version    SVN: $Id$
  */
 class sfGenerationMemcacheCache extends sfCache

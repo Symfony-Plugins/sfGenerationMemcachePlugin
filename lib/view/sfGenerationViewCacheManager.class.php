@@ -1,4 +1,21 @@
 <?php
+
+/*
+ * This file is part of the sfGenerationMemcachePlugin package.
+ * (c) 2009 Ben Lumley
+ * 
+ * For the full copyright and license information, please view the LICENSE
+ * file that was distributed with this source code.
+ */
+
+/**
+ * Extension to sfViewCacheManager that takes care of config and application of generation keys
+ *
+ * @package    sfGenerationMemcachePlugin
+ * @subpackage view
+ * @author     Ben Lumley
+ * @version    SVN: $Id$
+ */
 class sfGenerationViewCacheManager extends sfViewCacheManager {
   
   public function generateCacheKey($internalUri, $hostName = '', $vary = '', $contextualPrefix = '') {
@@ -43,7 +60,7 @@ class sfGenerationViewCacheManager extends sfViewCacheManager {
   public function addCache($moduleName, $actionName, $options = array())
   {
     parent::addCache($moduleName, $actionName, $options);
-    $this->cacheConfig[$moduleName][$actionName]['generationGroup'] = isset($options['generationGroup']) ? $options['generationGroup'] : false;
+    $this->cacheConfig[$moduleName][$actionName]['generationGroup'] = isset($options['generationGroup']) ? (array)$options['generationGroup'] : false;
   }
   
   public function incrementGenerationGroup($generationGroup) {

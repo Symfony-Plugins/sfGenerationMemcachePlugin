@@ -10,7 +10,7 @@ It should be noted that this plugin doesn't allow you to be as specific when cle
 
 ## Requirements ##
 
-The plugin will only help you if you are using memcached as your cache backend - for notes regarding other backends, see the appendix at the bottom.
+The plugin will probably only help you if you are using memcached as your cache backend - for notes regarding other backends, see the appendix at the bottom.
 
 ## Installation ##
 
@@ -20,7 +20,7 @@ The plugin will only help you if you are using memcached as your cache backend -
 
  * Edit filters.yml
 
-    Edit your application's config/factories.yml so that your app uses the plugins view cache manager and view cache classes:
+    Edit your application's config/factories.yml so that your app uses the plugin's view cache manager and view cache classes:
 
         all:
           view_cache_manager:
@@ -29,7 +29,7 @@ The plugin will only help you if you are using memcached as your cache backend -
           view_cache:
             class: sfGenerationMemcacheCache
             param:
-              host: localhost
+              host: localhost # this and the next few lines configure the memcached server - change these to suit your environment
               port: 11211
               prefix: frontend
               persistent: true
@@ -40,7 +40,7 @@ The plugin will only help you if you are using memcached as your cache backend -
 
 ## Usage ##
 
-To use the plugin, you must configure generation_group keys in the relevant cache.yml file(s)
+For the plugin to do anything, you must configure generation_group keys in the relevant cache.yml file(s)
 
 An example module/config/cache.yml config would be:
 
@@ -55,10 +55,25 @@ An example module/config/cache.yml config would be:
   
         archive:
           lifetime: 86400
+          
+If you are configuring your caching from PHP, you can pass a generationGroup option to the ViewCacheManager's addCache method. The above examples would be:
+          
+        sfContext::getInstance()->getViewCacheManager()->addCache('module', 'show', array(
+          'lifeTime' => 3600, 
+          'generationGroup' => 'profile',
+        );
+        
+This also accepts arrays:
+
+        sfContext::getInstance()->getViewCacheManager()->addCache('module', 'index', array(
+          'lifeTime' => 3600, 
+          'generationGroup' => array('profile', 'home'),
+        );
+          
   
 ## Understanding This Config ##
 
-This config will cause cache keys generated for module/show to be suffixed with:
+The config in the yaml above will cause cache keys generated for module/show to be suffixed with:
 
     /gk_profile/1
 
@@ -66,13 +81,13 @@ And those generated for module/index to be suffixed with:
 
     /gk_profile/1/gk_home/1 
 
-Those for module/archive are untouched as it has no generation_group set and will be as they always have been.
+Those for module/archive are untouched as it has no generation_group set.
 
 If the generation is incremented for home, the key for module/show remains unchanged, its cache will still be valid. The key for module/index will change though, it will now be suffixed with 
 
     /gk_profile/1/gk_home/2
 
-The key has now changed, so the cached data will be regenerated for this action (as well as any others that specify the home generation_group).
+The key has now changed, so the cached data will be regenerated for this action (as well as any others that specify the home generation_group) - the cache has effectively been cleared for members of this group.
 
 Similarly, if the generation is then incremented for profile, the key for module/show gets suffixed with 
 
@@ -88,29 +103,29 @@ In both of the above examples, the cache key for module/archive would be unchang
 
 You may be wondering about leaving all this data in cache under old generation keys, and whether its a good idea. Memcached takes care of this for us: It auto expires old items from cache according to the valid times set in cache.yml. It also removes the least recently used items from memory if it fills its allocation - which should always be the older generations of cached data. Therefore, you shouldn't run into issues as long as you have configured memcached to use a sensible amount of memory.
 
-## Incrementing The Cache ##
+## Incrementing The Generation Number For A Group ##
 
-There are two ways to increment the cache:
+There are two ways to increment the generation number for a particular generation group:
 
   * From the ViewCacheManager
 
-    The sfGenerationNewCacheManager provides a method to increment the generation for a particular key:
+    The sfGenerationNewCacheManager provides a method to increment the generation for a particular generation group:
 
-        // increment the profile generation
+        // increment the profile generation group
         $cachemanager = sfContext::getInstance()->getViewCacheManager();
         $cachemanager->incrementGenerationGroup('profile'); 
 
-    There is also a wrapper method that can be passed an array of keys to increment generation for.
+    There is also a wrapper method that can be passed an array of generation groups to increment the generation for.
 
-        // increment the profile and home generations
+        // increment the profile and home generation groups
         $cachemanager = sfContext::getInstance()->getViewCacheManager();
         $cachemanager->incrementGenerationGroups(array('profile', 'home'));
 
   * Using the command line task
 
-    The plugin comes with a task to clear the cache:
+    The plugin comes with a task to increment the generation number for a given generation group:
 
-        // increment the home generation
+        // increment the home generation group
         symfony cache:increment-generation home 
 
     This task takes an optional environment and application parameter.
@@ -128,4 +143,4 @@ This plugin has been designed to be used with memcached (hence the name), howeve
 
 The default file based cache should not be used with this method in my view - it does not auto-invalidate as the memory based systems do, so the cache would consume ever more disk space. The file based cache also does not suffer the performance issue this was designed to address. I believe this would also apply to SqlIte
 
-APC, eAccelerator and Xcache all have methods to obtain a list of keys, so are unlikely to benefit from this method to the same degree, but developers may benefit from the functionality it offers. In this case it may be worth adapting the plugin. Creation of an increment method in a copy of the relevant sfXXXCache.class.php file from symfony/lib/vendor/cache should be all that is required, plus a change to factories.yml. The increment method is simply required to store an integer value in the cache under a passed in key, or add 1 to the existing value if it already exists. If anyone does this, contact me, and I will add you as a devloper to this plugin.
+APC, eAccelerator and Xcache all have methods to obtain a list of keys in the cache (meaning symfony doesn't store a list of them itself), so are unlikely to benefit from this method to the same degree, but developers may benefit from the functionality it offers. In this case it may be worth adapting the plugin. Creation of an increment method in a copy of the relevant sfXXXCache.class.php file from symfony/lib/vendor/cache should be all that is required, plus a change to factories.yml. The increment method is simply required to store an integer value in the cache under a passed in key, or add 1 to the existing value if it already exists. If anyone does this, contact me, and I will add you as a devloper to this plugin so that the extra functionality can be included.
